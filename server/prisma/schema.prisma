@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  style          String
+  inputVideoUrl  String
+  outputVideoUrl String?   // filled when completed
+  thumbnailUrl   String?   // optional for later
+  petName        String?
+  status         String    @default("QUEUED") // JobStatus: QUEUED | PROCESSING | COMPLETED | FAILED
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
