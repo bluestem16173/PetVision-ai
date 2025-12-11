@@ -4,22 +4,17 @@ import { CreateJobBody } from "../types";
 
 const router = express.Router();
 
-// In-memory map to track fake processing timeouts (dev only)
-const mockTimers = new Map<string, NodeJS.Timeout>();
-
-// Utility to schedule mock AI completion
+// ---- MOCK AI PROCESSOR ----
 function scheduleMockProcessing(jobId: string) {
-  // Simulate processing delay (e.g., 8 seconds)
-  const timeout = setTimeout(async () => {
+  setTimeout(async () => {
     try {
-      // In a real system, we'd check the current status and call an AI provider.
-      // For now, just mark as COMPLETED with fake URLs.
       await prisma.job.update({
         where: { id: jobId },
         data: {
           status: "COMPLETED",
-          outputVideoUrl: `https://example.com/output/${jobId}.mp4`,
-          thumbnailUrl: `https://example.com/output/${jobId}.jpg`,
+          outputVideoUrl:
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          thumbnailUrl: null,
         },
       });
     } catch (err) {
@@ -31,18 +26,11 @@ function scheduleMockProcessing(jobId: string) {
           errorMessage: "Mock processing error",
         },
       });
-    } finally {
-      mockTimers.delete(jobId);
     }
   }, 8000);
-
-  mockTimers.set(jobId, timeout);
 }
 
-/**
- * POST /api/jobs
- * Create a new generation job
- */
+// POST /api/jobs  → create job
 router.post("/", async (req: Request, res: Response) => {
   const body = req.body as CreateJobBody;
 
@@ -53,7 +41,6 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    // Create job as QUEUED, then immediately mark as PROCESSING + schedule mock worker
     const job = await prisma.job.create({
       data: {
         style: body.style,
@@ -63,12 +50,13 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
 
-    // Immediately move to PROCESSING to simulate queue handling
+    // Immediately mark as PROCESSING
     await prisma.job.update({
       where: { id: job.id },
       data: { status: "PROCESSING" },
     });
 
+    // Simulate AI processing
     scheduleMockProcessing(job.id);
 
     return res.status(201).json({
@@ -77,14 +65,12 @@ router.post("/", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("Error creating job:", err);
+    if (err instanceof Error) console.error(err.stack);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-/**
- * GET /api/jobs/:jobId
- * Get job status/details
- */
+// GET /api/jobs/:jobId  → check status
 router.get("/:jobId", async (req: Request, res: Response) => {
   const { jobId } = req.params;
 
@@ -118,14 +104,12 @@ router.get("/:jobId", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("Error fetching job:", err);
+    if (err instanceof Error) console.error(err.stack);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-/**
- * GET /api/jobs
- * List recent jobs (for now, global; later can be per-user)
- */
+// GET /api/jobs  → list recent jobs
 router.get("/", async (_req: Request, res: Response) => {
   try {
     const jobs = await prisma.job.findMany({
@@ -146,6 +130,7 @@ router.get("/", async (_req: Request, res: Response) => {
     );
   } catch (err) {
     console.error("Error listing jobs:", err);
+    if (err instanceof Error) console.error(err.stack);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

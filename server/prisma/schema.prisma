@@ -11,8 +11,8 @@ model Job {
   id             String    @id @default(cuid())
   style          String
   inputVideoUrl  String
-  outputVideoUrl String?   // filled when completed
-  thumbnailUrl   String?   // optional for later
+  outputVideoUrl String?
+  thumbnailUrl   String?
   petName        String?
   status         String    @default("QUEUED") // JobStatus: QUEUED | PROCESSING | COMPLETED | FAILED
   errorMessage   String?

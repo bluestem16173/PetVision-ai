@@ -1,51 +1,44 @@
-import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
-import { CreateJobRequest, CreateJobResponse, Job } from '../types/api';
+import { CreateJobRequest, CreateJobResponse, Job } from "../types/api";
 
-class ApiClient {
-  private baseUrl: string;
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.50:4000";
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+export async function createJob(
+  pickedVideo: { uri: string; type: string; name: string },
+  selectedStyleId: string,
+  selectedCategory: string
+): Promise<CreateJobResponse> {
+  const formData = new FormData();
+  
+  // Append file - React Native FormData accepts { uri, type, name }
+  formData.append("file", pickedVideo as any);
+  formData.append("themeId", selectedStyleId);
+  formData.append("modeCategory", selectedCategory);
+
+  const res = await fetch(`${BASE_URL}/api/jobs`, {
+    method: "POST",
+    body: formData,
+    // Don't set Content-Type header - React Native will set it with boundary
+    headers: {},
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({
+      error: `HTTP ${res.status}: ${res.statusText}`,
+    }));
+    throw new Error(error.error || "Failed to create job");
   }
 
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      throw new Error(error.error || 'Request failed');
-    }
-
-    return response.json();
-  }
-
-  async createJob(data: CreateJobRequest): Promise<CreateJobResponse> {
-    return this.request<CreateJobResponse>(API_ENDPOINTS.JOBS, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async getJob(jobId: string): Promise<Job> {
-    return this.request<Job>(API_ENDPOINTS.JOB_BY_ID(jobId));
-  }
-
-  async getAllJobs(): Promise<Job[]> {
-    return this.request<Job[]>(API_ENDPOINTS.JOBS);
-  }
+  return res.json();
 }
 
-export const apiClient = new ApiClient(API_BASE_URL);
+export async function getJob(jobId: string): Promise<Job> {
+  const res = await fetch(`${BASE_URL}/api/jobs/${jobId}`);
+  if (!res.ok) throw new Error("Failed to fetch job");
+  return res.json();
+}
 
+export async function listJobs(): Promise<Job[]> {
+  const res = await fetch(`${BASE_URL}/api/jobs`);
+  if (!res.ok) throw new Error("Failed to fetch jobs");
+  return res.json();
+}

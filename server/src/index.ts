@@ -4,7 +4,7 @@ import cors from "cors";
 import jobsRouter from "./routes/jobs";
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
 app.use(cors());
 app.use(express.json()); // parse JSON bodies
@@ -19,6 +19,7 @@ app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`PetVision AI server running on http://localhost:${PORT}`);
+  console.log(`Server accessible at http://0.0.0.0:${PORT}`);
 });

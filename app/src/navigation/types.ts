@@ -1,25 +1,30 @@
-import { NavigatorScreenParams } from '@react-navigation/native';
+import { PowerTierId } from "../types/api";
+
+
 
 export type RootStackParamList = {
-  Home: undefined;
-  Upload: undefined;
-  StylePicker: {
-    videoUri: string;
-  };
-  Generating: {
-    jobId: string;
-  };
-  Result: {
-    jobId: string;
-    outputVideoUrl: string;
-    style: string;
-    petName?: string;
-  };
-};
 
-declare global {
-  namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
-  }
-}
+  Home: undefined;
+
+  Upload: undefined;
+
+  Trim: { videoUri: string };
+
+  StylePicker: { videoUri: string; trimStart?: number; trimEnd?: number };
+
+  Generating: { jobId: string };
+
+  Result: { outputVideoUrl: string };
+
+  JobStatus: { jobId: string };
+
+  Library: undefined;
+
+  Upgrade: {
+
+    requestedTier?: PowerTierId;
+
+  };
+
+};
 

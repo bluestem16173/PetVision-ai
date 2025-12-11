@@ -11,6 +11,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
+    <MediaProvider>
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName="Home"
@@ -51,6 +52,7 @@ export default function AppNavigator() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+    </MediaProvider>
   );
 }
 

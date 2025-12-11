@@ -1,160 +1,134 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Share,
-  Alert,
-} from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { Video, ResizeMode } from 'expo-av';
-import { RootStackParamList } from '../navigation/types';
+import React from "react";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type ResultRouteProp = RouteProp<RootStackParamList, 'Result'>;
+import { View, Text, Button, StyleSheet, TouchableOpacity } from "react-native";
 
-export default function ResultScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<ResultRouteProp>();
-  const { outputVideoUrl, style, petName } = route.params;
-  const videoRef = React.useRef<Video>(null);
+import { Video, ResizeMode } from "expo-av";
 
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `Check out my pet's ${style} transformation! ${outputVideoUrl}`,
-        url: outputVideoUrl,
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to share video');
-    }
-  };
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-  const handleDownload = () => {
-    // For MVP, this is a placeholder
-    // In production, you'd use expo-file-system and MediaLibrary to save
-    Alert.alert(
-      'Download',
-      'Download functionality will be implemented in a future update. For now, you can share the video!'
-    );
-  };
+import { RootStackParamList } from "../navigation/types";
 
-  const handleCreateAnother = () => {
-    navigation.navigate('Home');
-  };
+
+
+type Props = NativeStackScreenProps<RootStackParamList, "Result">;
+
+
+
+export default function ResultScreen({ route, navigation }: Props) {
+
+  const { outputVideoUrl } = route.params;
+
+
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.videoContainer}>
-        <Video
-          ref={videoRef}
-          source={{ uri: outputVideoUrl }}
-          style={styles.video}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          isLooping
-          shouldPlay
-        />
-      </View>
 
-      <View style={styles.infoContainer}>
-        {petName && (
-          <Text style={styles.petName}>✨ {petName}</Text>
-        )}
-        <Text style={styles.styleText}>
-          Style: {style.charAt(0).toUpperCase() + style.slice(1)}
-        </Text>
-      </View>
-
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.downloadButton} onPress={handleDownload}>
-          <Text style={styles.buttonText}>⬇️ Download</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Text style={styles.buttonText}>📤 Share</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
 
       <TouchableOpacity
-        style={styles.createAnotherButton}
-        onPress={handleCreateAnother}
+
+        style={styles.backBar}
+
+        onPress={() => navigation.goBack()}
+
       >
-        <Text style={styles.createAnotherText}>Create Another ✨</Text>
+
+        <Text style={styles.backBarText}>← Back</Text>
+
       </TouchableOpacity>
-    </ScrollView>
+
+
+
+      <Text style={styles.title}>Let the Pawesomeness Begin!!!</Text>
+
+
+
+      <Video
+
+        source={{ uri: outputVideoUrl }}
+
+        style={styles.video}
+
+        useNativeControls
+
+        resizeMode={ResizeMode.CONTAIN}
+
+      />
+
+
+
+      <View style={styles.buttonRow}>
+
+        <Button
+
+          title="Back"
+
+          onPress={() => navigation.goBack()}   // 👈 just goes back to Generating
+
+        />
+
+        <View style={{ height: 8 }} />
+
+        <Button
+
+          title="Home"
+
+          onPress={() =>
+
+            navigation.reset({ index: 0, routes: [{ name: "Home" }] })
+
+          }
+
+        />
+
+      </View>
+
+    </View>
+
   );
+
 }
 
+
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  videoContainer: {
-    width: '100%',
-    height: 300,
-    backgroundColor: '#000',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  infoContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  petName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+
+  container: { flex: 1, padding: 16, gap: 16 },
+
+  backBar: {
+
+    backgroundColor: "#f3f4f6",
+
+    paddingVertical: 12,
+
+    paddingHorizontal: 16,
+
+    borderRadius: 8,
+
     marginBottom: 8,
+
   },
-  styleText: {
+
+  backBarText: {
+
     fontSize: 16,
-    color: '#6b7280',
+
+    fontWeight: "600",
+
+    color: "#111827",
+
   },
-  actionsContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+
+  title: { fontSize: 22, fontWeight: "bold", textAlign: "center" },
+
+  video: { width: "100%", aspectRatio: 9 / 16, backgroundColor: "#000" },
+
+  buttonRow: {
+
+    marginTop: 16,
+
+    gap: 8,
+
   },
-  downloadButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  shareButton: {
-    flex: 1,
-    backgroundColor: '#6366f1',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  createAnotherButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    margin: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6366f1',
-  },
-  createAnotherText: {
-    color: '#6366f1',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
 });
 
