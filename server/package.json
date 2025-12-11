@@ -14,15 +14,21 @@
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
-    "express": "^4.22.1"
+    "express": "^4.22.1",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.25",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.19.2",
     "nodemon": "^3.1.11",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
-  }
+  },
+  "description": "Backend API for PetVision AI mobile app.",
+  "keywords": [],
+  "author": "",
+  "type": "commonjs"
 }
