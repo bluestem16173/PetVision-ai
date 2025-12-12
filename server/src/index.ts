@@ -13,9 +13,7 @@ app.use(express.json()); // parse JSON bodies
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "petvision-ai-server" });
-});
+app.get("/health", (req, res) => res.status(200).send("ok"));
 
 app.use("/api/jobs", jobsRouter);
 
