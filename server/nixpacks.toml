@@ -1,8 +1,9 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs-20_x"]
 
 [phases.install]
-cmds = ["npm install", "npm run prisma:generate"]
+cmds = ["npm install"]
+# postinstall script will automatically run prisma generate
 
 [phases.build]
 cmds = ["npm run build"]
