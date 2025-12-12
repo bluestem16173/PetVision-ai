@@ -1,8 +1,25 @@
 import express, { Request, Response } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { prisma } from "../prisma";
 import { CreateJobBody } from "../types";
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: "uploads/",
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
+  },
+});
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // ---- MOCK AI PROCESSOR ----
 function scheduleMockProcessing(jobId: string) {
@@ -30,22 +47,46 @@ function scheduleMockProcessing(jobId: string) {
   }, 8000);
 }
 
-// POST /api/jobs  → create job
-router.post("/", async (req: Request, res: Response) => {
-  const body = req.body as CreateJobBody;
+// POST /api/jobs  → create job (with file upload)
+router.post("/", upload.single("file"), async (req: Request, res: Response) => {
+  const file = req.file;
+  const themeId = req.body.themeId;
+  const modeCategory = req.body.modeCategory;
 
-  if (!body?.style || !body?.inputVideoUrl) {
+  if (!file) {
     return res.status(400).json({
-      error: "Missing required fields: style, inputVideoUrl",
+      error: "Missing required field: file",
+    });
+  }
+
+  if (!themeId || !modeCategory) {
+    // Clean up uploaded file if validation fails
+    if (file?.path) {
+      fs.unlink(file.path, () => {});
+    }
+    return res.status(400).json({
+      error: "Missing required fields: themeId, modeCategory",
     });
   }
 
   try {
+    // For now, store the file path. In production, you'd upload to S3/Cloud Storage
+    const inputVideoUrl = `/uploads/${file.filename}`;
+
+    // Map modeCategory to style (simplified - you may want a more sophisticated mapping)
+    const styleMap: Record<string, string> = {
+      sports: "sports",
+      movies: "pixar",
+      superhero: "superhero",
+      fairytale: "anime",
+    };
+    const style = styleMap[modeCategory] || "pixar";
+
     const job = await prisma.job.create({
       data: {
-        style: body.style,
-        inputVideoUrl: body.inputVideoUrl,
-        petName: body.petName ?? null,
+        style: style,
+        inputVideoUrl: inputVideoUrl,
+        petName: null,
         status: "QUEUED",
       },
     });
@@ -64,6 +105,10 @@ router.post("/", async (req: Request, res: Response) => {
       status: "QUEUED",
     });
   } catch (err) {
+    // Clean up uploaded file on error
+    if (file?.path) {
+      fs.unlink(file.path, () => {});
+    }
     console.error("Error creating job:", err);
     if (err instanceof Error) console.error(err.stack);
     return res.status(500).json({ error: "Internal server error" });
