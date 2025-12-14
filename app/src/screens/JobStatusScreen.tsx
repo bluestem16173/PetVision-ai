@@ -18,6 +18,8 @@ import {
 
 import { RouteProp, useRoute } from "@react-navigation/native";
 
+import { Video, ResizeMode } from "expo-av";
+
 import { Job, getJob } from "../api/client";
 
 import * as FileSystem from "expo-file-system";
@@ -44,6 +46,60 @@ const POLL_INTERVAL = 3000;
 
 
 
+async function saveVideoToPhone(outputVideoUrl: string, jobId: string) {
+
+  // 1) ask permission
+
+  const perm = await MediaLibrary.requestPermissionsAsync();
+
+  if (!perm.granted) {
+
+    throw new Error("Photos permission not granted");
+
+  }
+
+
+
+  // 2) download to local app storage
+
+  const localUri = `${FileSystem.documentDirectory}petvision_${jobId}.mp4`;
+
+
+
+  const download = await FileSystem.downloadAsync(outputVideoUrl, localUri);
+
+
+
+  // 3) create asset in gallery
+
+  const asset = await MediaLibrary.createAssetAsync(download.uri);
+
+
+
+  // 4) optional: put it in a PetVision album
+
+  const albumName = "PetVision";
+
+  const album = await MediaLibrary.getAlbumAsync(albumName);
+
+  if (album) {
+
+    await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+
+  } else {
+
+    await MediaLibrary.createAlbumAsync(albumName, asset, false);
+
+  }
+
+
+
+  return asset;
+
+}
+
+
+
 const JobStatusScreen: React.FC = () => {
 
   const route = useRoute<JobStatusRouteProp>();
@@ -55,6 +111,38 @@ const JobStatusScreen: React.FC = () => {
   const [job, setJob] = useState<Job | null>(null);
 
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const [progress, setProgress] = useState(10);
+
+
+
+  useEffect(() => {
+
+    if (!job) return;
+
+    if (job.status === "QUEUED") setProgress(20);
+
+    if (job.status === "PROCESSING") setProgress(60);
+
+    if (job.status === "COMPLETED") setProgress(100);
+
+  }, [job?.status]);
+
+
+
+  useEffect(() => {
+
+    if (job?.status === "COMPLETED") return;
+
+    const t = setInterval(() => {
+
+      setProgress((p) => Math.min(p + 1, 95));
+
+    }, 800);
+
+    return () => clearInterval(t);
+
+  }, [job?.status]);
 
 
 
@@ -116,41 +204,13 @@ const JobStatusScreen: React.FC = () => {
 
 
 
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      await saveVideoToPhone(job.outputVideoUrl!, job.jobId);
 
-      if (status !== "granted") {
+      alert("Saved to your Photos/Gallery ✅");
 
-        alert("Permission required to save media.");
+    } catch (e: any) {
 
-        return;
-
-      }
-
-
-
-      const fileUri = `${FileSystem.documentDirectory}petvision_${job.jobId}.mp4`;
-
-
-
-      const downloadRes = await FileSystem.downloadAsync(
-
-        job.outputVideoUrl,
-
-        fileUri
-
-      );
-
-      await MediaLibrary.saveToLibraryAsync(downloadRes.uri);
-
-
-
-      alert("Saved to your gallery 👌");
-
-    } catch (e) {
-
-      console.warn("Save failed", e);
-
-      alert("Could not save. Try again.");
+      alert(e?.message ?? "Save failed");
 
     } finally {
 
@@ -258,63 +318,101 @@ const JobStatusScreen: React.FC = () => {
 
       {isDone && (
 
-        <>
+        <View style={styles.doneContainer}>
 
-          {job.thumbnailUrl && (
+          {/* Top 50%: Video box */}
 
-            <Image
+          <View style={styles.videoBox}>
 
-              source={{ uri: job.thumbnailUrl }}
+            <Video
 
-              style={styles.thumbnail}
+              source={{ uri: job.outputVideoUrl! }}
+
+              style={styles.video}
+
+              useNativeControls
+
+              resizeMode={ResizeMode.CONTAIN}
+
+              shouldPlay={false}
+
+              isLooping={false}
 
             />
 
-          )}
+          </View>
 
 
 
-          <Text style={styles.doneText}>Done! 🎉</Text>
+          {/* Bottom 50%: Actions */}
 
-          <Text style={styles.text}>
+          <View style={styles.actionsBox}>
 
-            You can now save or share this transformation.
+            <Text style={styles.doneTitle}>Done! 🎉</Text>
 
-          </Text>
+            <Text style={styles.doneSubtitle}>
+
+              Preview it first—then save it to your phone or share it.
+
+            </Text>
 
 
 
-          <View style={styles.buttonRow}>
+            <View style={styles.metaRow}>
 
-            <Pressable
+              <Text style={styles.metaText}>
 
-              style={[styles.button, isDownloading && styles.buttonDisabled]}
-
-              onPress={handleSaveToDevice}
-
-              disabled={isDownloading}
-
-            >
-
-              <Text style={styles.buttonText}>
-
-                {isDownloading ? "Saving…" : "Save to device"}
+                {job.petName ? `${job.petName} • ` : ""}{job.style}
 
               </Text>
 
-            </Pressable>
+              <Text style={styles.metaText}>{job.status}</Text>
+
+            </View>
 
 
 
-            <Pressable style={styles.secondaryButton} onPress={handleShare}>
+            <View style={styles.buttonRow}>
 
-              <Text style={styles.secondaryButtonText}>Share</Text>
+              <Pressable
 
-            </Pressable>
+                style={[styles.primaryBtn, isDownloading && styles.btnDisabled]}
+
+                onPress={handleSaveToDevice}
+
+                disabled={isDownloading}
+
+              >
+
+                <Text style={styles.primaryBtnText}>
+
+                  {isDownloading ? "Saving…" : "Save to device"}
+
+                </Text>
+
+              </Pressable>
+
+
+
+              <Pressable style={styles.secondaryBtn} onPress={handleShare}>
+
+                <Text style={styles.secondaryBtnText}>Share</Text>
+
+              </Pressable>
+
+            </View>
+
+
+
+            <Text style={styles.hint}>
+
+              Tip: Saved videos go to your gallery (and the "PetVision" album if enabled).
+
+            </Text>
 
           </View>
 
-        </>
+        </View>
 
       )}
 
@@ -346,23 +444,107 @@ const styles = StyleSheet.create({
 
   },
 
-  statusBox: { marginTop: 20, alignItems: "center", gap: 8 },
+  statusBox: { marginTop: 20, alignItems: "center", marginBottom: 8 },
 
   errorText: { marginTop: 16, color: "#FF6B6B", fontWeight: "600" },
 
-  doneText: { marginTop: 16, color: "#3ECF8E", fontSize: 16, fontWeight: "700" },
+  doneContainer: {
 
-  thumbnail: {
+    flex: 1,
 
-    marginTop: 16,
+    marginTop: 14,
+
+  },
+
+  videoBox: {
+
+    flex: 1, // 50%
+
+    marginTop: 12,
+
+    marginHorizontal: 4,
+
+    borderRadius: 18,
+
+    overflow: "hidden",
+
+    backgroundColor: "#111",
+
+    borderWidth: 1,
+
+    borderColor: "rgba(255,255,255,0.10)",
+
+  },
+
+  video: {
 
     width: "100%",
 
-    height: 200,
+    height: "100%",
 
-    borderRadius: 16,
+  },
 
-    backgroundColor: "#111",
+  actionsBox: {
+
+    flex: 1, // 50%
+
+    paddingHorizontal: 4,
+
+    paddingBottom: 12,
+
+    marginTop: 14,
+
+  },
+
+  doneTitle: {
+
+    fontSize: 18,
+
+    fontWeight: "800",
+
+    color: "#ffffff",
+
+    marginBottom: 10,
+
+  },
+
+  doneSubtitle: {
+
+    fontSize: 13,
+
+    color: "rgba(255,255,255,0.75)",
+
+    marginBottom: 10,
+
+  },
+
+  metaRow: {
+
+    flexDirection: "row",
+
+    justifyContent: "space-between",
+
+    alignItems: "center",
+
+    paddingVertical: 8,
+
+    paddingHorizontal: 10,
+
+    borderRadius: 12,
+
+    backgroundColor: "rgba(255,255,255,0.06)",
+
+    marginBottom: 10,
+
+  },
+
+  metaText: {
+
+    fontSize: 12,
+
+    fontWeight: "600",
+
+    color: "rgba(255,255,255,0.85)",
 
   },
 
@@ -370,13 +552,13 @@ const styles = StyleSheet.create({
 
     flexDirection: "row",
 
-    marginTop: 16,
+    marginTop: 6,
 
-    gap: 12,
+    marginBottom: 12,
 
   },
 
-  button: {
+  primaryBtn: {
 
     flex: 1,
 
@@ -384,25 +566,25 @@ const styles = StyleSheet.create({
 
     borderRadius: 999,
 
-    paddingVertical: 10,
+    paddingVertical: 12,
 
     alignItems: "center",
 
+    marginRight: 12,
+
   },
 
-  buttonDisabled: { opacity: 0.6 },
-
-  buttonText: {
+  primaryBtnText: {
 
     color: "#060712",
 
-    fontWeight: "700",
+    fontWeight: "800",
 
     fontSize: 14,
 
   },
 
-  secondaryButton: {
+  secondaryBtn: {
 
     flex: 1,
 
@@ -410,23 +592,41 @@ const styles = StyleSheet.create({
 
     borderWidth: 1,
 
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: "rgba(255,255,255,0.35)",
 
     alignItems: "center",
 
     justifyContent: "center",
 
-    paddingVertical: 10,
+    paddingVertical: 12,
 
   },
 
-  secondaryButtonText: {
+  secondaryBtnText: {
 
     color: "#ffffff",
 
-    fontWeight: "600",
+    fontWeight: "700",
 
     fontSize: 14,
+
+  },
+
+  btnDisabled: {
+
+    opacity: 0.6,
+
+  },
+
+  hint: {
+
+    marginTop: 2,
+
+    fontSize: 12,
+
+    color: "rgba(255,255,255,0.6)",
+
+    textAlign: "center",
 
   },
 

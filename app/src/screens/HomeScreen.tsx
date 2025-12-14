@@ -8,6 +8,8 @@ import { useNavigation } from "@react-navigation/native";
 
 import { RootStackParamList } from "../navigation/types";
 
+import DebugApiTest from "../components/DebugApiTest";
+
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -100,13 +102,15 @@ export default function HomeScreen() {
 
   return (
 
-    <ScrollView style={styles.container}>
+    <View style={{ flex: 1 }}>
 
-      {/* HERO SECTION */}
+      <ScrollView style={styles.container}>
 
-      <View style={styles.hero}>
+        {/* HERO SECTION */}
 
-        <Text style={styles.badge}>BETA ACCESS</Text>
+        <View style={styles.hero}>
+
+          <Text style={styles.badge}>BETA ACCESS</Text>
 
         <Text style={styles.title}>Turn your pet into a hero.</Text>
 
@@ -220,7 +224,11 @@ export default function HomeScreen() {
 
       </View>
 
-    </ScrollView>
+      </ScrollView>
+
+      <DebugApiTest />
+
+    </View>
 
   );
 

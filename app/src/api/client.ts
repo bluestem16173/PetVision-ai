@@ -1,6 +1,6 @@
 import { CreateJobRequest, CreateJobResponse, Job } from "../types/api";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.50:4000";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://patient-reflection-production.up.railway.app";
 
 export async function createJob(
   pickedVideo: { uri: string; type: string; name: string },

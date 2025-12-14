@@ -10,3 +10,5 @@ export function getThumbnailKey(jobId: string): string {
   return `thumbs/${jobId}.jpg`;
 }
 
+
+

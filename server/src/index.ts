@@ -14,11 +14,17 @@ const PORT = Number(process.env.PORT) || 8080;
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  const start = Date.now();
+  res.on("finish", () => {
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - start}ms)`
+    );
+  });
   next();
 });
 
 app.use(cors());
+app.options("*", cors());
 app.use(express.json()); // parse JSON bodies
 
 // Serve uploaded files statically
@@ -65,6 +71,18 @@ app.get("/api/r2/play-url", async (req, res) => {
 
   const url = await getSignedUrl(r2, cmd, { expiresIn: 60 * 10 }); // 10 min
   res.json({ key, url });
+});
+
+// Error handling middleware for multer file size errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      error: "file_too_large",
+      message: "Video too large. Trim shorter (10–15s) or compress.",
+      maxBytes: 50 * 1024 * 1024,
+    });
+  }
+  next(err);
 });
 
 app.use((req, res) => {

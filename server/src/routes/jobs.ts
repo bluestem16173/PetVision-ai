@@ -65,44 +65,48 @@ function scheduleMockProcessing(jobId: string) {
 
 // POST /api/jobs  → create job (with file upload)
 router.post("/", upload.single("file"), async (req: Request, res: Response) => {
-  // MUST exist for Postman POST not to 404
-  const { themeId, modeCategory, petName } = req.body;
+  try {
+    console.log("BODY:", req.body);
+    console.log("FILE:", req.file ? {
+      name: req.file.originalname,
+      size: req.file.size,
+      type: req.file.mimetype
+    } : null);
 
-  if (!themeId || !modeCategory) {
-    return res.status(400).json({ error: "Missing required fields: themeId, modeCategory" });
+    const { themeId, modeCategory, petName } = req.body;
+
+    if (!themeId || !modeCategory) {
+      return res.status(400).json({ error: "Missing required fields: themeId, modeCategory" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "Missing required field: file" });
+    }
+
+    // create job (mock OK for now)
+    return res.json({ jobId: "test", status: "QUEUED" });
+  } catch (err) {
+    console.error("❌ POST /api/jobs ERROR:", err);
+    console.error(err?.stack);
+    return res.status(500).json({ error: "Internal server error" });
   }
-
-  if (!req.file) {
-    return res.status(400).json({ error: "Missing required field: file" });
-  }
-
-  // create job (mock OK for now)
-  return res.json({ jobId: "test", status: "QUEUED" });
 });
 
 // GET /api/jobs/:jobId  → check status
 router.get("/:jobId", async (req: Request, res: Response) => {
-  try {
-    const job = await prisma.job.findUnique({
-      where: { id: req.params.jobId },
-    });
+  const job = await prisma.job.findUnique({ where: { id: req.params.jobId } });
 
-    if (!job) return res.status(404).json({ error: "Job not found" });
+  if (!job) return res.status(404).json({ error: "Job not found" });
 
-    res.json({
-      jobId: job.id,
-      status: job.status,
-      style: job.style,
-      petName: job.petName,
-      createdAt: job.createdAt,
-      outputVideoUrl: job.outputVideoUrl,
-      thumbnailUrl: job.thumbnailUrl,
-    });
-  } catch (err) {
-    console.error("Error fetching job:", err);
-    if (err instanceof Error) console.error(err.stack);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+  res.json({
+    jobId: job.id,
+    status: job.status,
+    style: job.style,
+    petName: job.petName,
+    createdAt: job.createdAt,
+    outputVideoUrl: job.outputVideoUrl,
+    thumbnailUrl: job.thumbnailUrl,
+  });
 });
 
 // GET /api/jobs  → list all jobs
